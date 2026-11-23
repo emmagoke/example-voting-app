@@ -1,0 +1,16 @@
+.git
+.gitignore
+.dockerignore
+Dockerfile*
+
+node_modules/
+bin/
+obj/
+**/__pycache__
+*.pyc
+
+.env
+.env.*
+
+*.md
+*.log

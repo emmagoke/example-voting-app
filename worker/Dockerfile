@@ -23,6 +23,10 @@ RUN dotnet publish -c release -o /app -a $TARGETARCH --self-contained false --no
 
 # app image
 FROM mcr.microsoft.com/dotnet/runtime:7.0
+# Creating a Non-Root User and Group
+RUN addgroup --system app && adduser --system --ingroup app app
 WORKDIR /app
 COPY --from=build /app .
+# Switching to the Non-Root User
+USER app
 ENTRYPOINT ["dotnet", "Worker.dll"]

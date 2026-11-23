@@ -1,0 +1,88 @@
+# docker-compose.prod.yml
+# Runs the production images locally, the same ones CI builds and Helm deploys.
+# Usage: docker compose -f docker-compose.prod.yml up --build
+
+services:
+  vote:
+    build:
+      context: ./vote
+      target: final            # production stage, not dev
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    ports:
+      - "8080:8080"
+    networks:
+      - front-tier
+      - back-tier
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  result:
+    build: ./result
+    environment:
+      PORT: "8080"             # non-root can't bind port 80
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    networks:
+      - front-tier
+      - back-tier
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  worker:
+    build: ./worker
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - back-tier
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - "./healthchecks:/healthchecks:ro"
+    healthcheck:
+      test: /healthchecks/redis.sh
+      interval: 5s
+    networks:
+      - back-tier
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - "db-data:/var/lib/postgresql/data"
+      - "./healthchecks:/healthchecks:ro"
+    healthcheck:
+      test: /healthchecks/postgres.sh
+      interval: 5s
+    networks:
+      - back-tier
+    restart: unless-stopped
+
+volumes:
+  db-data:
+
+networks:
+  front-tier:
+  back-tier:
