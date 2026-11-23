@@ -21,8 +21,8 @@ RUN npm ci && \
 
 COPY --chown=app:app . .
 
-ENV PORT=80
-EXPOSE 80
+ENV PORT=8080
+EXPOSE 8080
 
 # Switching to the Non-Root User
 USER app
